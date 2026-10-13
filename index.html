@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI-Powered Context-Aware Intelligent Room | Prototype Simulation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    
+    :root {
+      --bg-space: #070a13;
+      --card-bg: rgba(15, 23, 42, 0.78);
+      --border-glow: rgba(56, 189, 248, 0.2);
+      --accent-cyan: #38bdf8;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-space);
+      color: #f1f5f9;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Ambient room lighting overlay transitions */
+    .room-canvas-container {
+      transition: background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Fan spinning animation */
+    @keyframes spin-fan {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .fan-spin-slow { animation: spin-fan 1.8s linear infinite; }
+    .fan-spin-med { animation: spin-fan 0.8s linear infinite; }
+    .fan-spin-fast { animation: spin-fan 0.35s linear infinite; }
+
+    /* Airflow wave animation */
+    @keyframes air-wave {
+      0% { opacity: 0.1; transform: translateY(0px) scaleX(0.9); }
+      50% { opacity: 0.7; transform: translateY(12px) scaleX(1.05); }
+      100% { opacity: 0; transform: translateY(24px) scaleX(1.15); }
+    }
+    .air-particle { animation: air-wave 1.6s ease-out infinite; }
+
+    /* Glass card styles */
+    .glass-panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .glow-cyan {
+      box-shadow: 0 0 25px -4px rgba(56, 189, 248, 0.35);
+    }
+
+    /* Custom range sliders */
+    input[type=range] {
+      accent-color: #38bdf8;
+    }
+
+    /* Pulse beacon */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 0.2; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulse-indicator { animation: pulse-ring 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-white">
+
+  <!-- ================= TOP NAVIGATION / ORCHESTRATOR BAR ================= -->
+  <header class="glass-panel border-b border-slate-800 sticky top-0 z-40 px-5 py-3">
+    <div class="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand & Core Philosophy -->
+      <div class="flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-sky-400 flex items-center justify-center font-mono font-bold text-slate-950 text-xl shadow-lg shadow-cyan-500/20">
+          AI
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base font-bold tracking-tight text-white">Context-Aware Intelligent Room</h1>
+            <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">
+              Prototype Simulator
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">
+            "We are not making every appliance intelligent. We are making the environment intelligent."
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Pipeline Indicators -->
+      <div class="flex items-center space-x-4 bg-slate-900/90 border border-slate-800 px-3.5 py-1.5 rounded-xl">
+        <div class="flex items-center space-x-2">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="pulse-indicator absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <span class="text-xs font-mono text-slate-300">Central Hub: <span class="text-emerald-400 font-semibold">Active</span></span>
+        </div>
+
+        <div class="h-4 w-px bg-slate-750 border-r border-slate-800"></div>
+
+        <div class="flex items-center space-x-1.5 text-xs font-mono">
+          <span class="text-slate-400">Current Context:</span>
+          <span id="header-mode-badge" class="px-2.5 py-0.5 rounded font-bold uppercase text-[11px] bg-sky-500/20 text-sky-300 border border-sky-400/30">
+            ENTER
+          </span>
+        </div>
+
+        <div class="h-4 w-px bg-slate-750 border-r border-slate-800"></div>
+
+        <div class="flex items-center space-x-1.5 text-xs font-mono">
+          <span class="text-slate-400">Confidence:</span>
+          <span id="header-confidence" class="font-bold text-cyan-400">92%</span>
+        </div>
+      </div>
+
+      <!-- Guided Live Demo Controls (Presenter Mode) -->
+      <div class="flex items-center space-x-2">
+        <div class="text-[11px] font-mono text-slate-400 hidden xl:block uppercase mr-1">College Demo Flow:</div>
+        <button id="btn-prev-step" onclick="prevDemoStep()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition" title="Previous step">
+          ◀ Prev
+        </button>
+        <button id="btn-play-pause" onclick="toggleDemoAutoplay()" class="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-xs font-semibold text-slate-950 flex items-center space-x-1.5 shadow-md shadow-cyan-600/25 transition">
+          <span id="play-pause-icon">▶</span>
+          <span id="play-pause-text">Play Demo</span>
+        </button>
+        <button id="btn-next-step" onclick="nextDemoStep()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition" title="Next step">
+          Next ▶
+        </button>
+        <button onclick="resetSimulation()" class="px-2.5 py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-xs text-red-300 border border-red-800 transition" title="Reset to initial state">
+          Reset
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= GUIDED DEMO COMMENTARY BANNER ================= -->
+  <div id="demo-banner" class="bg-gradient-to-r from-slate-900 via-sky-950/60 to-slate-900 border-b border-sky-800/40 px-5 py-2.5 transition-all">
+    <div class="max-w-[1720px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2">
+      <div class="flex items-start md:items-center space-x-3">
+        <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-500 text-slate-950 font-bold tracking-wider shrink-0 uppercase" id="demo-step-num">
+          Step 1/6
+        </span>
+        <p class="text-xs md:text-sm text-slate-200" id="demo-step-desc">
+          <strong class="text-cyan-300 font-semibold">Stage 1: Person Enters Room.</strong> Door opens and PIR registers movement in low ambient daylight. Sensor fusion raises Enter Mode confidence to 94%.
+        </p>
+      </div>
+      <div class="text-[11px] font-mono text-cyan-400/80 shrink-0 self-end md:self-auto">
+        Presenter Academic Walkthrough
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN TWO-COLUMN WORKSPACE ================= -->
+  <main class="max-w-[1720px] mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1">
+    
+    <!-- LEFT: VIRTUAL ROOM VISUALIZATION (7 COLUMNS) -->
+    <div class="lg:col-span-7 flex flex-col space-y-4">
+      
+      <!-- Virtual Room Canvas Card -->
+      <div class="glass-panel rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex-1 flex flex-col">
+        
+        <!-- Room Card Header with Mode Pill Quick Selectors -->
+        <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono">Virtual Room Floorplan & Actuation</span>
+          </div>
+
+          <!-- Quick Mode Selectors (Original 7 PPT Modes) -->
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button onclick="applyPresetMode('Enter')" class="mode-pill text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-700 bg-slate-800 hover:border-cyan-500 transition text-slate-300" id="pill-Enter">1. Enter</button>
+            <button onclick="applyPresetMode('Entertainment')" class="mode-pill text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-700 bg-slate-800 hover:border-cyan-500 transition text-slate-300" id="pill-Entertainment">2. Entertainment</button>
+            <button onclick="applyPresetMode('Relax')" class="mode-pill text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-700 bg-slate-800 hover:border-cyan-500 transition text-slate-300" id="pill-Relax">3. Relax</button>
+            <button onclick="applyPresetMode('Sleep Prep')" class="mode-pill text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-700 bg-slate-800 hover:border-cyan-500 transition text-slate-300" id="pill-SleepPrep">4. Sleep Prep</button>
+            <button onclick="applyPresetMode('Sleep')" class="mode-pill text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-700 bg-slate-800 hover:border-cyan-500 transition text-slate-300" id="pill-Sleep">5. Sleep</button>
+            <button onclick="applyPresetMode('Wake-Up')" class="mode-pill text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-700 bg-slate-800 hover:border-cyan-500 transition text-slate-300" id="pill-WakeUp">6. Wake-Up</button>
+            <button onclick="applyPresetMode('Away')" class="mode-pill text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-700 bg-slate-800 hover:border-cyan-500 transition text-slate-300" id="pill-Away">7. Away</button>
+          </div>
+        </div>
+
+        <!-- 2D High-Fidelity Interactive Room Simulation Space -->
+        <div id="room-canvas" class="room-canvas-container relative flex-1 min-h-[460px] p-6 bg-slate-950 flex flex-col justify-between overflow-hidden">
+          
+          <!-- Ambient Lighting Cone Simulation Overlay -->
+          <div id="ambient-light-overlay" class="absolute inset-0 pointer-events-none transition-all duration-700 mix-blend-screen opacity-40" style="background: radial-gradient(circle at 50% 30%, rgba(254, 240, 138, 0.45) 0%, transparent 75%);"></div>
+
+          <!-- TOP WALL: AC, AIR PURIFIER, MOTORIZED BLINDS & WINDOW -->
+          <div class="relative z-10 flex items-start justify-between">
+            
+            <!-- Air Conditioner Unit -->
+            <div id="vis-ac-card" class="bg-slate-900/85 border border-slate-700 rounded-xl p-3 w-44 shadow-lg backdrop-blur">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[10px] font-mono uppercase text-slate-400">Climate AC (Split)</span>
+                <span id="vis-ac-power-badge" class="text-[9px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">ON</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <span id="vis-ac-temp" class="text-xl font-bold font-mono text-cyan-400">24°C</span>
+                <span id="vis-ac-mode" class="text-[10px] text-slate-300">Cool • Auto</span>
+              </div>
+              <!-- Simulated Airflow Discharge Streams -->
+              <div id="vis-ac-airflow" class="mt-2 pt-1 border-t border-slate-800 flex justify-around">
+                <div class="w-1.5 h-4 bg-cyan-400/70 rounded-full air-particle"></div>
+                <div class="w-1.5 h-4 bg-cyan-400/70 rounded-full air-particle" style="animation-delay: 0.3s"></div>
+                <div class="w-1.5 h-4 bg-cyan-400/70 rounded-full air-particle" style="animation-delay: 0.6s"></div>
+              </div>
+            </div>
+
+            <!-- Ceiling Lighting Fixture & Fan (Room Center Ceiling) -->
+            <div class="flex flex-col items-center space-y-2">
+              <div id="vis-ceiling-light" class="w-16 h-16 rounded-full border-2 border-yellow-300/60 bg-yellow-100/80 shadow-[0_0_40px_rgba(253,224,71,0.6)] flex items-center justify-center transition-all duration-700">
+                <!-- Ceiling Fan with real-time speed rotation -->
+                <div id="vis-fan-blades" class="w-10 h-10 relative fan-spin-med transition-all">
+                  <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1 bg-slate-700/80 rounded"></div>
+                  <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 bg-slate-700/80 rounded"></div>
+                  <div class="absolute inset-0 m-auto w-3 h-3 rounded-full bg-slate-900 border border-slate-600"></div>
+                </div>
+              </div>
+              <div class="text-[10px] font-mono text-slate-400 text-center">
+                Fixtures: <span id="vis-light-percent" class="text-yellow-450 font-bold">75%</span> • Fan: <span id="vis-fan-speed-label" class="text-cyan-400 font-bold">Medium</span>
+              </div>
+            </div>
+
+            <!-- Motorized Window & Smart Blinds -->
+            <div class="bg-slate-900/85 border border-slate-700 rounded-xl p-3 w-44 shadow-lg backdrop-blur">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[10px] font-mono uppercase text-slate-400">Motorized Blinds</span>
+                <span id="vis-blinds-status" class="text-[9px] font-mono px-1.5 rounded bg-sky-950 text-sky-400 border border-sky-800">OPEN 60%</span>
+              </div>
+              <!-- Visual Blind Slats -->
+              <div class="w-full h-10 bg-slate-950 rounded border border-slate-800 p-1 flex flex-col justify-between overflow-hidden relative">
+                <div id="vis-blind-slat-1" class="h-1 bg-slate-500 rounded transition-all"></div>
+                <div id="vis-blind-slat-2" class="h-1 bg-slate-500 rounded transition-all"></div>
+                <div id="vis-blind-slat-3" class="h-1 bg-slate-500 rounded transition-all"></div>
+                <div id="vis-blind-slat-4" class="h-1 bg-slate-500 rounded transition-all"></div>
+              </div>
+              <div class="mt-1 text-[9px] text-slate-400 text-right">Motor Driver (Relay)</div>
+            </div>
+
+          </div>
+
+          <!-- CENTER ROOM: MEDIA TV CONSOLE & SOFA / OCCUPANCY -->
+          <div class="relative z-10 my-4 flex items-center justify-around gap-6">
+            
+            <!-- Smart TV Display Simulation -->
+            <div class="flex flex-col items-center">
+              <div id="vis-tv-frame" class="w-48 h-28 bg-slate-950 rounded-lg border-2 border-slate-850 p-1.5 shadow-2xl relative transition-all duration-500 flex flex-col items-center justify-center">
+                <!-- TV Screen Display Content -->
+                <div id="vis-tv-screen" class="w-full h-full bg-slate-900 rounded flex flex-col items-center justify-center overflow-hidden transition-all duration-500">
+                  <span id="vis-tv-content-icon" class="text-2xl mb-0.5">🎬</span>
+                  <span id="vis-tv-content-text" class="text-[10px] font-mono font-bold text-sky-300">MEDIA PLAYBACK</span>
+                  <span id="vis-tv-hdmi" class="text-[8px] font-mono text-slate-400">HDMI 1 • 4K</span>
+                </div>
+                <!-- TV Stand -->
+                <div class="absolute -bottom-2 w-14 h-1.5 bg-slate-700 rounded-full"></div>
+              </div>
+              <span class="text-[10px] font-mono text-slate-400 mt-2">IR Blaster Controlled</span>
+            </div>
+
+            <!-- Living Area Sofa & Occupant Persona Simulation -->
+            <div class="flex flex-col items-center relative">
+              <div class="w-40 h-20 bg-slate-800/90 border border-slate-700 rounded-2xl relative flex items-center justify-center shadow-lg">
+                <div class="absolute -top-3 w-32 h-6 bg-slate-700/80 rounded-t-xl border-t border-slate-600"></div>
+                <!-- Human Character Avatar in Room -->
+                <div id="vis-human-avatar" class="flex flex-col items-center transition-all duration-500 transform translate-y-0">
+                  <div class="w-6 h-6 rounded-full bg-cyan-400 border border-white shadow flex items-center justify-center text-[10px]">
+                    👤
+                  </div>
+                  <span id="vis-human-label" class="text-[9px] font-mono text-cyan-250 font-bold bg-slate-900/90 px-1 rounded mt-0.5">Present</span>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono text-slate-400 mt-1">PIR & Micro-Motion Zone</span>
+            </div>
+
+            <!-- Bed Occupancy Area -->
+            <div class="flex flex-col items-center">
+              <div id="vis-bed-frame" class="w-36 h-28 bg-slate-800/60 border-2 border-slate-700 rounded-xl relative p-2 flex flex-col justify-between shadow-lg">
+                <!-- Pillow -->
+                <div class="w-20 h-5 bg-slate-600/70 rounded-md mx-auto border border-slate-500"></div>
+                <!-- Duvet / Mattress with Pressure Indicator -->
+                <div id="vis-bed-mattress" class="w-full h-14 bg-slate-700/50 rounded-lg border border-slate-600/70 flex items-center justify-center transition-all">
+                  <span id="vis-bed-status" class="text-[9px] font-mono text-slate-400 font-semibold">Vacant</span>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono text-slate-400 mt-1">Bed Sensor (Piezo/Force)</span>
+            </div>
+
+          </div>
+
+          <!-- BOTTOM WALL: SMART ENTRY DOOR & AIR PURIFIER -->
+          <div class="relative z-10 flex items-end justify-between">
+            
+            <!-- Smart Entry Door with Magnetic Reed Contact -->
+            <div class="bg-slate-900/85 border border-slate-700 rounded-xl p-3 w-44 shadow-lg backdrop-blur">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[10px] font-mono uppercase text-slate-400">Entry Portal</span>
+                <span id="vis-door-state" class="text-[9px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">CLOSED</span>
+              </div>
+              <div class="flex items-center space-x-2 mt-2">
+                <div id="vis-door-graphic" class="w-7 h-12 bg-amber-900 border border-amber-600 rounded-sm relative transition-all duration-500 transform origin-left">
+                  <div class="w-1.5 h-1.5 rounded-full bg-yellow-400 absolute right-1 top-6"></div>
+                </div>
+                <div class="text-[10px] text-slate-300 font-mono">
+                  Reed Switch: <span id="vis-door-sensor-val" class="text-cyan-400 font-bold">Secure</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Night Light / Secondary Path Illumination -->
+            <div id="vis-night-light-container" class="flex flex-col items-center">
+              <div id="vis-night-light" class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                <span class="text-xs">💡</span>
+              </div>
+              <span class="text-[9px] font-mono text-slate-400 mt-1">Path Nightlight</span>
+            </div>
+
+            <!-- Air Purifier (HEPA Filtration) -->
+            <div class="bg-slate-900/85 border border-slate-700 rounded-xl p-3 w-44 shadow-lg backdrop-blur">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[10px] font-mono uppercase text-slate-400">Air Purifier</span>
+                <span id="vis-purifier-badge" class="text-[9px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">ON</span>
+              </div>
+              <div class="flex items-center space-x-2 mt-1">
+                <div id="vis-purifier-led" class="w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#10b981]"></div>
+                <div class="text-[10px] font-mono text-slate-300">
+                  AQI Target: <span class="text-emerald-400 font-semibold">&lt; 25 PM2.5</span>
+                </div>
+              </div>
+              <div class="text-[9px] text-slate-400 mt-1">Smart Relay Controlled</div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Room Hardware Status Footer Strip -->
+        <div class="bg-slate-900 border-t border-slate-800 px-4 py-2 flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-400">
+          <div>Passive Sensing Architecture: <span class="text-cyan-450 text-emerald-400 font-semibold">Zero Camera Surveillance</span></div>
+          <div>Protocols: <span class="text-slate-300">IR Blaster • Smart Relays • Motor Driver • LAN IP</span></div>
+        </div>
+
+      </div>
+
+      <!-- IN-DEPTH SENSOR TELEMETRY & INJECTION RACK -->
+      <div class="glass-panel rounded-2xl p-4 border border-slate-800">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-2">
+            <span class="text-cyan-400 font-bold text-xs uppercase font-mono">01 Raw Environmental & Presence Sensor Array</span>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Telemetry Injector</span>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400">Move sliders to test AI Sensor Fusion live</span>
+        </div>
+
+        <!-- Grid of 9 Real-Time Sensor Telemetry Controls -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-3">
+          
+          <!-- PIR Motion Sensor -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-mono uppercase text-slate-400">PIR Motion</span>
+              <span id="label-sensor-pir" class="text-[10px] font-mono font-bold text-emerald-400">Active</span>
+            </div>
+            <button onclick="toggleSensor('pir')" id="btn-sensor-pir" class="w-full mt-1 py-1 rounded text-xs font-mono font-bold bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/40 transition">
+              Motion Detected
+            </button>
+          </div>
+
+          <!-- Door Contact Sensor -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-mono uppercase text-slate-400">Door Reed Switch</span>
+              <span id="label-sensor-door" class="text-[10px] font-mono font-bold text-slate-300">Closed</span>
+            </div>
+            <button onclick="toggleSensor('door')" id="btn-sensor-door" class="w-full mt-1 py-1 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:border-cyan-500 transition">
+              Toggle Open/Closed
+            </button>
+          </div>
+
+          <!-- Bed Pressure Sensor -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-mono uppercase text-slate-400">Bed Occupancy</span>
+              <span id="label-sensor-bed" class="text-[10px] font-mono font-bold text-slate-400">Vacant</span>
+            </div>
+            <button onclick="toggleSensor('bed')" id="btn-sensor-bed" class="w-full mt-1 py-1 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:border-cyan-500 transition">
+              Toggle Occupied
+            </button>
+          </div>
+
+          <!-- Ambient Light / Lux -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] font-mono uppercase text-slate-400">Ambient Lux</span>
+              <span id="val-sensor-lux" class="text-xs font-mono font-bold text-yellow-400">120 lx</span>
+            </div>
+            <input type="range" id="input-sensor-lux" min="0" max="1000" value="120" oninput="updateSensorSlider('lux', this.value)" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer" />
+            <div class="flex justify-between text-[8px] font-mono text-slate-400 mt-0.5">
+              <span>0 lx (Pitch dark)</span>
+              <span>1000 lx (Noon)</span>
+            </div>
+          </div>
+
+          <!-- Temperature Sensor -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] font-mono uppercase text-slate-400">Ambient Temp</span>
+              <span id="val-sensor-temp" class="text-xs font-mono font-bold text-cyan-400">27.5°C</span>
+            </div>
+            <input type="range" id="input-sensor-temp" min="16" max="38" step="0.5" value="27.5" oninput="updateSensorSlider('temp', this.value)" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer" />
+            <div class="flex justify-between text-[8px] font-mono text-slate-400 mt-0.5">
+              <span>16°C</span>
+              <span>38°C</span>
+            </div>
+          </div>
+
+          <!-- Ambient Sound Sensor (dB) -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] font-mono uppercase text-slate-400">Sound dB (Scalar)</span>
+              <span id="val-sensor-sound" class="text-xs font-mono font-bold text-purple-400">42 dB</span>
+            </div>
+            <input type="range" id="input-sensor-sound" min="20" max="95" value="42" oninput="updateSensorSlider('sound', this.value)" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer" />
+            <div class="flex justify-between text-[8px] font-mono text-slate-400 mt-0.5">
+              <span>25 dB (Whisper)</span>
+              <span>85 dB (TV/Speech)</span>
+            </div>
+          </div>
+
+          <!-- Relative Humidity -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] font-mono uppercase text-slate-400">Humidity</span>
+              <span id="val-sensor-humidity" class="text-xs font-mono font-bold text-blue-400">55%</span>
+            </div>
+            <input type="range" id="input-sensor-humidity" min="20" max="90" value="55" oninput="updateSensorSlider('humidity', this.value)" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer" />
+            <div class="flex justify-between text-[8px] font-mono text-slate-400 mt-0.5">
+              <span>20% (Dry)</span>
+              <span>90% (Humid)</span>
+            </div>
+          </div>
+
+          <!-- Air Freshness (CO₂) -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] font-mono uppercase text-slate-400">CO₂ Concentration</span>
+              <span id="val-sensor-co2" class="text-xs font-mono font-bold text-emerald-400">580 ppm</span>
+            </div>
+            <input type="range" id="input-sensor-co2" min="400" max="2200" step="50" value="580" oninput="updateSensorSlider('co2', this.value)" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer" />
+            <div class="flex justify-between text-[8px] font-mono text-slate-400 mt-0.5">
+              <span>400 (Fresh)</span>
+              <span>1800 (Stuffy)</span>
+            </div>
+          </div>
+
+          <!-- Particulate Matter (PM2.5) -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] font-mono uppercase text-slate-400">PM2.5 Dust</span>
+              <span id="val-sensor-pm25" class="text-xs font-mono font-bold text-emerald-400">18 µg/m³</span>
+            </div>
+            <input type="range" id="input-sensor-pm25" min="5" max="180" value="18" oninput="updateSensorSlider('pm25', this.value)" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer" />
+            <div class="flex justify-between text-[8px] font-mono text-slate-400 mt-0.5">
+              <span>Good (&lt;30)</span>
+              <span>Unhealthy (&gt;100)</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- RIGHT: AI DECISION ENGINE & CENTRAL TOUCH PANEL (5 COLUMNS) -->
+    <div class="lg:col-span-5 flex flex-col space-y-4">
+      
+      <!-- CENTRAL TOUCHSCREEN WALL PANEL (Exact Slide 6 Replica) -->
+      <div class="glass-panel rounded-2xl p-5 border border-sky-500/30 glow-cyan relative overflow-hidden">
+        
+        <!-- Header Banner -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+          <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 rounded bg-cyan-400 animate-pulse"></div>
+            <span class="text-xs font-mono uppercase font-bold tracking-wider text-slate-200">
+              Central Touchscreen Interface (Wall Mount)
+            </span>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+            Slide 6 Interactive Model
+          </span>
+        </div>
+
+        <!-- Touchscreen Big Display Header -->
+        <div class="bg-gradient-to-r from-slate-900 to-slate-950 border border-slate-800 rounded-xl p-4 mb-4 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-mono uppercase text-slate-400 tracking-wider">Current Context Mode</div>
+            <div id="touch-active-mode" class="text-2xl font-bold font-mono text-white tracking-wide">ENTERTAINMENT</div>
+            <div class="text-[11px] text-slate-400 mt-0.5" id="touch-mode-desc">Ambient lights dimmed, window shades down, TV active.</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] font-mono uppercase text-slate-400">Indoor Temp</div>
+            <div id="touch-room-temp" class="text-3xl font-mono font-bold text-cyan-400">24°C</div>
+          </div>
+        </div>
+
+        <!-- Interactive Appliance Control Grid (With Human Override & Preference Learning) -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          
+          <!-- Lighting Tile -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-mono text-slate-400">Lights</span>
+              <span id="touch-light-val" class="text-xs font-mono font-bold text-yellow-400">30%</span>
+            </div>
+            <div class="flex items-center space-x-2 mt-2">
+              <button onclick="manualOverrideAppliance('light', -10)" class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm transition">-</button>
+              <div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div id="touch-light-bar" class="h-full bg-yellow-400 transition-all" style="width: 30%"></div>
+              </div>
+              <button onclick="manualOverrideAppliance('light', 10)" class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm transition">+</button>
+            </div>
+            <div class="text-[9px] font-mono text-slate-400 mt-2">Manual override learns preference</div>
+          </div>
+
+          <!-- AC Target Setpoint Tile -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-mono text-slate-400">AC Climate</span>
+              <span id="touch-ac-val" class="text-xs font-mono font-bold text-cyan-400">24°C</span>
+            </div>
+            <div class="flex items-center space-x-2 mt-2">
+              <button onclick="manualOverrideAppliance('ac', -1)" class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm transition">-</button>
+              <div class="flex-1 text-center font-mono font-bold text-slate-200 text-sm" id="touch-ac-target">
+                24°C Target
+              </div>
+              <button onclick="manualOverrideAppliance('ac', 1)" class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm transition">+</button>
+            </div>
+            <div class="text-[9px] font-mono text-slate-400 mt-2">AI default setpoint: <span id="learned-ac-baseline" class="text-cyan-300">24°C</span></div>
+          </div>
+
+          <!-- Fan Speed -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-mono text-slate-400">Ceiling Fan</span>
+              <span id="touch-fan-val" class="text-xs font-mono font-bold text-slate-300">Low</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1 mt-2">
+              <button onclick="manualOverrideAppliance('fan', 'Off')" class="py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-300 hover:bg-slate-700 transition">Off</button>
+              <button onclick="manualOverrideAppliance('fan', 'Low')" class="py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-300 hover:bg-slate-700 transition">Low</button>
+              <button onclick="manualOverrideAppliance('fan', 'High')" class="py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-300 hover:bg-slate-700 transition">High</button>
+            </div>
+          </div>
+
+          <!-- Television State -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-mono text-slate-400">Television</span>
+              <span id="touch-tv-val" class="text-xs font-mono font-bold text-sky-400">HDMI 1</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 mt-2">
+              <button onclick="manualOverrideAppliance('tv', 'toggle')" class="py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-300 hover:bg-slate-700 transition" id="touch-tv-btn">Power Off</button>
+              <button onclick="manualOverrideAppliance('tv', 'input')" class="py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-300 hover:bg-slate-700 transition">HDMI 1/2</button>
+            </div>
+          </div>
+
+          <!-- Air Purifier -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-mono text-slate-400">Purifier</span>
+              <span id="touch-purifier-val" class="text-xs font-mono font-bold text-emerald-400">Running</span>
+            </div>
+            <button onclick="manualOverrideAppliance('purifier', 'toggle')" class="w-full mt-2 py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-300 hover:bg-slate-700 transition">
+              Toggle HEPA Fan
+            </button>
+          </div>
+
+          <!-- Motorized Blinds -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-mono text-slate-400">Blinds</span>
+              <span id="touch-blinds-val" class="text-xs font-mono font-bold text-slate-300">Closed</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 mt-2">
+              <button onclick="manualOverrideAppliance('blinds', 'Open')" class="py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-300 hover:bg-slate-700 transition">Open</button>
+              <button onclick="manualOverrideAppliance('blinds', 'Closed')" class="py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-300 hover:bg-slate-700 transition">Close</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Real-Time Preference Learning Feedback Banner -->
+        <div id="preference-feedback-box" class="bg-sky-950/40 border border-sky-800/60 rounded-xl p-2.5 flex items-start space-x-2 text-[11px] text-slate-300">
+          <span class="text-cyan-400 text-sm">💡</span>
+          <div>
+            <strong class="text-cyan-300">Human-In-The-Loop:</strong>
+            <span id="preference-feedback-text">Any manual adjustment updates the appliance immediately without fighting the user. Continuous selections train future context defaults.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SENSOR FUSION ENGINE & CONFIDENCE GATE PANEL -->
+      <div class="glass-panel rounded-2xl p-5 border border-slate-800 flex-1 flex flex-col">
+        
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-mono uppercase font-bold text-slate-200">
+              02 Sensor Fusion & 04 Confidence Gate
+            </span>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400">Deterministic Rule Engine</span>
+        </div>
+
+        <!-- Confidence Gauge Bar & Decision Pipeline Status -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 mb-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-mono text-slate-300">Context Confidence Score</span>
+            <span id="fusion-confidence-val" class="text-sm font-mono font-bold text-cyan-400">92% (High Confidence)</span>
+          </div>
+          <!-- Colored Progress Bar with High / Low Gate Markers -->
+          <div class="w-full bg-slate-800 h-3 rounded-full relative overflow-hidden mt-1.5">
+            <div id="fusion-confidence-bar" class="h-full bg-gradient-to-r from-amber-500 via-sky-400 to-emerald-400 transition-all duration-500" style="width: 92%"></div>
+          </div>
+          <div class="flex justify-between text-[9px] font-mono text-slate-400 mt-1">
+            <span>0% (No clue)</span>
+            <span class="text-amber-400">40% - 75% Gate: Ask User</span>
+            <span class="text-emerald-400">&gt; 75%: Automate</span>
+          </div>
+        </div>
+
+        <!-- Context Logic Explanation Box -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 mb-3 text-xs space-y-1.5">
+          <div class="font-mono text-[11px] text-slate-400 uppercase">Fused Signal Correlation:</div>
+          <div id="fusion-breakdown" class="text-slate-300 font-mono text-[11px] leading-relaxed">
+            • Door: <span class="text-emerald-400">Closed</span><br/>
+            • PIR: <span class="text-emerald-400">Active</span> + Sound: <span class="text-purple-400">42 dB</span><br/>
+            • Corroborating signals point to <strong class="text-cyan-300 font-bold">ENTERTAINMENT MODE</strong>.
+          </div>
+        </div>
+
+        <!-- Live Autonomous Decision / Actuation Event Log -->
+        <div class="flex-1 flex flex-col min-h-[140px]">
+          <div class="text-[10px] font-mono uppercase text-slate-400 mb-1.5 flex items-center justify-between">
+            <span>Actuation Audit Trail</span>
+            <button onclick="clearEventLogs()" class="text-slate-400 hover:text-slate-200">Clear</button>
+          </div>
+          <div id="event-log-container" class="flex-1 bg-slate-950/80 rounded-xl border border-slate-800/80 p-2.5 font-mono text-[10px] text-slate-400 space-y-1 overflow-y-auto max-h-40">
+            <div class="text-emerald-400">[10:04:12] Hub initialized in standalone simulation mode.</div>
+            <div class="text-sky-300">[10:04:13] Door contact closed. PIR active. Ambient Lux &lt; 150.</div>
+            <div class="text-cyan-400">[10:04:14] Confidence = 92% &gt; Threshold. Automating Entertainment Mode.</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= LOW CONFIDENCE DIALOG MODAL (Slide 5 Logic) ================= -->
+  <div id="low-confidence-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel border-2 border-amber-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div class="flex items-center space-x-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-xl font-bold">
+          ?
+        </div>
+        <div>
+          <div class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">Confidence Gate Triggered</div>
+          <h3 class="text-lg font-bold text-white">Ambiguous Context Detected</h3>
+        </div>
+      </div>
+
+      <p class="text-sm text-slate-300 mb-4" id="modal-prompt-text">
+        Sensors detected moderate acoustic energy (48 dB) and dim lighting, but motion is sporadic. Context confidence is only <strong class="text-amber-300">62%</strong>.
+      </p>
+
+      <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 mb-5 text-xs text-slate-300 font-mono">
+        Proposed Action: <strong class="text-cyan-300" id="modal-proposed-action">Activate Entertainment Mode?</strong><br/>
+        <span class="text-slate-400 text-[10px]">The AI will not force an action when evidence is weak.</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="handleModalResponse(false)" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 border border-slate-700 transition">
+          Decline / Keep State
+        </button>
+        <button onclick="handleModalResponse(true)" class="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-mono font-bold text-slate-950 shadow-lg shadow-cyan-600/30 transition">
+          Confirm Action
+        </button>
+      </div>
+
+      <div class="text-center mt-3 text-[10px] font-mono text-slate-400" id="modal-timeout-countdown">
+        Auto-canceling in 8 seconds (Preserving state)...
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER / ACADEMIC VALIDATION ================= -->
+  <footer class="glass-panel border-t border-slate-800 px-5 py-3 text-center text-xs text-slate-400 font-mono">
+    College Project Prototype Simulation • Developed for Interactive Demonstration • Grounded in PPT System Architecture
+  </footer>
+
+  <!-- ================= SIMULATION JAVASCRIPT LOGIC ================= -->
+  <script>
+    /* ----------------------------------------------------
+       SYSTEM STATE DATA MODEL
+    ---------------------------------------------------- */
+    const state = {
+      // 01 Physical Sensor Inputs
+      sensors: {
+        pir: true,             // Presence / kinetic movement
+        door: false,           // false = closed, true = open
+        bed: false,            // Bed occupancy sensor
+        lux: 120,              // Ambient light in lumens
+        temp: 27.5,            // Ambient Celsius
+        humidity: 55,          // %
+        sound: 42,             // Ambient dB (Scalar sound pressure level only)
+        co2: 580,              // ppm
+        pm25: 18               // µg/m³
+      },
+
+      // 02 Actuator & Appliance Operational Statuses
+      appliances: {
+        lightIntensity: 30,    // 0 to 100%
+        lightColor: 'warm',    // 'warm', 'bright', 'off', 'dim-amber'
+        nightLight: false,     // Secondary path light
+        acPower: true,
+        acTemp: 24,            // Target setpoint
+        fanSpeed: 'Low',       // 'Off', 'Low', 'Medium', 'High'
+        tvPower: true,
+        tvInput: 'HDMI 1',     // 'HDMI 1', 'Off'
+        blinds: 'Closed',      // 'Open', 'Closed', 'Half'
+        purifier: true
+      },
+
+      // Context Engine State
+      activeMode: 'Entertainment',
+      confidence: 92,
+      proposedMode: null,
+      
+      // Preference Learning Baselines (Learns from manual human overrides)
+      learnedPreferences: {
+        Entertainment: { ac: 24, light: 30 },
+        Relax: { ac: 23, light: 45 },
+        Sleep: { ac: 22, light: 0 }
+      },
+
+      // Guided Live Presentation Demo Flow
+      demoStep: 0,
+      demoAutoPlaying: false,
+      demoTimer: null
+    };
+
+    // 7 Defined Modes matching PowerPoint specifications
+    const MODE_DEFINITIONS = {
+      'Enter': {
+        name: 'Enter',
+        desc: 'Person enters; entry lights illuminate and baseline climate stabilizes.',
+        light: 75,
+        lightColor: 'bright',
+        acTemp: 24,
+        fan: 'Low',
+        tv: false,
+        blinds: 'Open',
+        purifier: true,
+        nightLight: false
+      },
+      'Entertainment': {
+        name: 'Entertainment',
+        desc: 'TV active; lights dim to 30%, motorized blinds close to eliminate glare.',
+        light: 30,
+        lightColor: 'warm',
+        acTemp: 24,
+        fan: 'Low',
+        tv: true,
+        blinds: 'Closed',
+        purifier: true,
+        nightLight: false
+      },
+      'Relax': {
+        name: 'Relax',
+        desc: 'Calm atmosphere; warm indirect lighting, quiet ventilation, soothing environment.',
+        light: 40,
+        lightColor: 'warm',
+        acTemp: 23,
+        fan: 'Low',
+        tv: false,
+        blinds: 'Closed',
+        purifier: true,
+        nightLight: false
+      },
+      'Sleep Prep': {
+        name: 'Sleep Prep',
+        desc: 'Bedtime transition; displays turn off, lighting fades slowly, ambient sound lowers.',
+        light: 15,
+        lightColor: 'dim-amber',
+        acTemp: 23,
+        fan: 'Low',
+        tv: false,
+        blinds: 'Closed',
+        purifier: true,
+        nightLight: false
+      },
+      'Sleep': {
+        name: 'Sleep',
+        desc: 'User asleep in bed; main fixtures powered down, discreet pathway nightlight on.',
+        light: 0,
+        lightColor: 'off',
+        acTemp: 22,
+        fan: 'Low',
+        tv: false,
+        blinds: 'Closed',
+        purifier: true,
+        nightLight: true
+      },
+      'Wake-Up': {
+        name: 'Wake-Up',
+        desc: 'Morning schedule; blinds open for daylight, gradual light rise, fresh ventilation.',
+        light: 85,
+        lightColor: 'bright',
+        acTemp: 25,
+        fan: 'Low',
+        tv: false,
+        blinds: 'Open',
+        purifier: true,
+        nightLight: false
+      },
+      'Away': {
+        name: 'Away',
+        desc: '~15 min unoccupied; non-essential appliances power down to preserve energy.',
+        light: 0,
+        lightColor: 'off',
+        acTemp: 28,
+        fan: 'Off',
+        tv: false,
+        blinds: 'Closed',
+        purifier: false,
+        nightLight: false
+      }
+    };
+
+    /* ----------------------------------------------------
+       PRESENTATION DEMO STEP SEQUENCER
+    ---------------------------------------------------- */
+    const DEMO_STEPS = [
+      {
+        title: "Stage 1: Person Enters Room (Enter Mode)",
+        desc: "The smart door contact opens, followed by immediate PIR motion detection. Multi-sensor fusion calculates high confidence (94%), automatically transitioning from Away to Enter Mode.",
+        action: () => {
+          setSensorValues({ door: true, pir: true, lux: 90, bed: false, sound: 52 });
+          setTimeout(() => {
+            state.sensors.door = false; // Door closes behind
+            runSensorFusion();
+          }, 1200);
+        }
+      },
+      {
+        title: "Stage 2: Television Turns On (Entertainment Mode)",
+        desc: "TV is powered on during evening lux conditions. The Central AI Hub coordinates multiple appliances at once: dimming fixtures to 30%, drawing motorized blinds, and engaging low-noise AC.",
+        action: () => {
+          setSensorValues({ door: false, pir: true, lux: 45, sound: 68, bed: false });
+          state.appliances.tvPower = true;
+          runSensorFusion();
+        }
+      },
+      {
+        title: "Stage 3: Ambiguous Situation Triggering Confidence Gate",
+        desc: "The occupant sits quietly reading. Sensor inputs show low motion (PIR dormant) but moderate sound (48 dB) and closed door. Instead of misinterpreting this as 'Away', the AI gates decision and asks.",
+        action: () => {
+          setSensorValues({ door: false, pir: false, lux: 50, sound: 48, bed: false });
+          // Force an ambiguous confidence score (62%) to demonstrate Slide 5 prompt logic
+          triggerLowConfidencePrompt("Relax");
+        }
+      },
+      {
+        title: "Stage 4: Human-in-the-Loop Override & Preference Learning",
+        desc: "The user manually adjusts the AC setpoint from 24°C to 26°C via the touchscreen panel. The AI respects human supremacy immediately and updates the contextual baseline for future activations.",
+        action: () => {
+          closeModal();
+          manualOverrideAppliance('ac', 2); // Raise to 26°C
+          logEvent("[Preference Learning] AI learned new preference for current context: AC baseline updated to 26°C.");
+        }
+      },
+      {
+        title: "Stage 5: Bed Occupancy Detected (Sleep Mode)",
+        desc: "The occupant gets into bed. The bed pressure sensor triggers, lux drops below 5, and ambient dB drops under 35. Sensor fusion verifies Sleep Mode (96% confidence), shutting off main lights and enabling nightlight.",
+        action: () => {
+          setSensorValues({ door: false, pir: false, bed: true, lux: 2, sound: 28 });
+          runSensorFusion();
+        }
+      },
+      {
+        title: "Stage 6: Room Empties (Away Mode Transition)",
+        desc: "Occupant leaves (door open then close, zero motion, zero bed pressure). Following the absence threshold, the room cuts non-essential loads, closes blinds, and sets the AC to eco-mode.",
+        action: () => {
+          setSensorValues({ door: false, pir: false, bed: false, lux: 300, sound: 22 });
+          runSensorFusion();
+        }
+      }
+    ];
+
+    /* ----------------------------------------------------
+       CORE SENSOR FUSION & CONTEXT RECOGNITION ENGINE
+    ---------------------------------------------------- */
+    function runSensorFusion() {
+      const s = state.sensors;
+      let detectedMode = 'Enter';
+      let confidence = 85;
+      let breakdownText = "";
+
+      // Fusion Case 1: Bed Occupied + Quiet + Dark -> Sleep Mode
+      if (s.bed && s.lux < 30 && s.sound < 45) {
+        detectedMode = 'Sleep';
+        confidence = 96;
+        breakdownText = `• Bed Sensor: <span class="text-emerald-400">Occupied</span><br/>• Lux: <span class="text-emerald-400">${s.lux} lx (Dark)</span> + Sound: <span class="text-emerald-400">${s.sound} dB (Quiet)</span><br/>• Fused Confidence: <strong class="text-emerald-400">96% (Sleep Mode)</strong>`;
+      }
+      // Fusion Case 2: Room Completely Empty -> Away Mode
+      else if (!s.pir && !s.bed && !s.door && s.sound < 32) {
+        detectedMode = 'Away';
+        confidence = 93;
+        breakdownText = `• PIR Motion: <span class="text-slate-400">Inactive</span><br/>• Bed: <span class="text-slate-400">Vacant</span> + Sound: <span class="text-emerald-400">${s.sound} dB</span><br/>• Sustained absence triggers <strong class="text-sky-300">Away Mode</strong>.`;
+      }
+      // Fusion Case 3: TV Power Active or Loud Sound + Evening Lux -> Entertainment
+      else if (state.appliances.tvPower && s.lux < 250 && s.pir) {
+        detectedMode = 'Entertainment';
+        confidence = 92;
+        breakdownText = `• TV Active + Evening Lux (<span class="text-yellow-400">${s.lux} lx</span>)<br/>• PIR: <span class="text-emerald-400">Occupant Active</span><br/>• Multi-sensor correlation identifies <strong class="text-cyan-300">Entertainment Mode</strong>.`;
+      }
+      // Fusion Case 4: Door Opened recently + PIR Active -> Enter Mode
+      else if (s.door || (s.pir && s.lux > 100 && !s.bed)) {
+        detectedMode = 'Enter';
+        confidence = 88;
+        breakdownText = `• Door/PIR Transition detected<br/>• Environmental light: <span class="text-yellow-400">${s.lux} lx</span><br/>• Transitioning to <strong class="text-cyan-300">Enter Mode</strong>.`;
+      }
+      // Fusion Case 5: Low noise, calm occupancy -> Relax Mode
+      else if (s.pir && s.sound < 50 && s.lux < 100) {
+        detectedMode = 'Relax';
+        confidence = 82;
+        breakdownText = `• PIR Active + Ambient noise low (<span class="text-purple-400">${s.sound} dB</span>)<br/>• Relaxed lighting profile verified.`;
+      }
+      else {
+        // Fallback or ambiguous situation
+        detectedMode = state.activeMode;
+        confidence = 65;
+        breakdownText = `• Ambiguous sensor correlation.<br/>• Confidence below 75% threshold.`;
+      }
+
+      state.confidence = confidence;
+
+      // Evaluate Confidence Gate
+      if (confidence >= 75) {
+        // High confidence: Automate immediately
+        if (state.activeMode !== detectedMode) {
+          applyMode(detectedMode, true);
+        }
+      } else if (confidence >= 40 && confidence < 75) {
+        // Low confidence: Ask user confirmation
+        triggerLowConfidencePrompt(detectedMode);
+      } else {
+        // Very low confidence: Preserve current state
+        logEvent(`[Confidence Gate] Very low confidence (${confidence}%). State strictly preserved.`);
+      }
+
+      updateUI(breakdownText);
+    }
+
+    /* ----------------------------------------------------
+       APPLY SPECIFIC MODE TO ACTUATORS
+    ---------------------------------------------------- */
+    function applyMode(modeKey, automated = false) {
+      const modeDef = MODE_DEFINITIONS[modeKey];
+      if (!modeDef) return;
+
+      state.activeMode = modeKey;
+
+      // Apply appliance parameters from definition
+      state.appliances.lightIntensity = modeDef.light;
+      state.appliances.lightColor = modeDef.lightColor;
+      state.appliances.nightLight = modeDef.nightLight;
+      state.appliances.fanSpeed = modeDef.fan;
+      state.appliances.tvPower = modeDef.tv;
+      state.appliances.tvInput = modeDef.tv ? 'HDMI 1' : 'Off';
+      state.appliances.blinds = modeDef.blinds;
+      state.appliances.purifier = modeDef.purifier;
+
+      // Check if user previously taught a custom preference for this mode
+      if (state.learnedPreferences[modeKey] && state.learnedPreferences[modeKey].ac) {
+        state.appliances.acTemp = state.learnedPreferences[modeKey].ac;
+      } else {
+        state.appliances.acTemp = modeDef.acTemp;
+      }
+
+      logEvent(`[${automated ? 'AI Automated' : 'Manual Selector'}] Activated "${modeKey} Mode" (${state.confidence}% conf).`);
+      updateUI();
+    }
+
+    /* ----------------------------------------------------
+       CONFIDENCE GATE CONFIRMATION DIALOG (Slide 5)
+    ---------------------------------------------------- */
+    let modalCountdownTimer = null;
+    let modalSecondsLeft = 8;
+
+    function triggerLowConfidencePrompt(proposed) {
+      state.proposedMode = proposed;
+      const modal = document.getElementById('low-confidence-modal');
+      const promptText = document.getElementById('modal-prompt-text');
+      const actionText = document.getElementById('modal-proposed-action');
+      
+      promptText.innerHTML = `Sensors detect ambient audio at <strong class="text-purple-300">${state.sensors.sound} dB</strong> and dim lighting, but motion is sporadic. Fusion confidence is only <strong class="text-amber-400">${state.confidence}%</strong>.`;
+      actionText.textContent = `Activate ${proposed} Mode?`;
+
+      modal.classList.remove('hidden');
+
+      // 8-Second Timeout preserving current state (Slide 5 principle)
+      clearInterval(modalCountdownTimer);
+      modalSecondsLeft = 8;
+      const countdownEl = document.getElementById('modal-timeout-countdown');
+      countdownEl.textContent = `Auto-canceling in ${modalSecondsLeft} seconds (Preserving state)...`;
+
+      modalCountdownTimer = setInterval(() => {
+        modalSecondsLeft--;
+        if (modalSecondsLeft <= 0) {
+          clearInterval(modalCountdownTimer);
+          handleModalResponse(false);
+          logEvent("[Confidence Gate Timeout] User silent. AI preserved existing room state.");
+        } else {
+          countdownEl.textContent = `Auto-canceling in ${modalSecondsLeft} seconds (Preserving state)...`;
+        }
+      }, 1000);
+    }
+
+    function handleModalResponse(accepted) {
+      clearInterval(modalCountdownTimer);
+      closeModal();
+      if (accepted && state.proposedMode) {
+        logEvent(`[User Prompt Accepted] User confirmed activation of ${state.proposedMode} Mode.`);
+        applyMode(state.proposedMode, false);
+      } else {
+        logEvent(`[User Prompt Declined] Preserved current state (${state.activeMode} Mode).`);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('low-confidence-modal').classList.add('hidden');
+    }
+
+    /* ----------------------------------------------------
+       MANUAL OVERRIDE & PREFERENCE LEARNING (Slide 6)
+    ---------------------------------------------------- */
+    function manualOverrideAppliance(type, val) {
+      if (type === 'light') {
+        state.appliances.lightIntensity = Math.min(100, Math.max(0, state.appliances.lightIntensity + val));
+        logEvent(`[Human Override] Lights set to ${state.appliances.lightIntensity}%.`);
+      } else if (type === 'ac') {
+        state.appliances.acTemp = Math.min(30, Math.max(16, state.appliances.acTemp + val));
+        
+        // Preference learning demonstration
+        if (!state.learnedPreferences[state.activeMode]) {
+          state.learnedPreferences[state.activeMode] = {};
+        }
+        state.learnedPreferences[state.activeMode].ac = state.appliances.acTemp;
+        
+        document.getElementById('learned-ac-baseline').textContent = `${state.appliances.acTemp}°C (Updated)`;
+        document.getElementById('preference-feedback-text').innerHTML = 
+          `<span class="text-emerald-400 font-bold">Learned Preference:</span> Target AC set to <strong>${state.appliances.acTemp}°C</strong>. The AI hub has updated this context's baseline for future sessions.`;
+        
+        logEvent(`[Preference Learning] Updated default setpoint for "${state.activeMode}" to ${state.appliances.acTemp}°C.`);
+      } else if (type === 'fan') {
+        state.appliances.fanSpeed = val;
+        logEvent(`[Human Override] Ceiling fan set to ${val}.`);
+      } else if (type === 'tv') {
+        if (val === 'toggle') {
+          state.appliances.tvPower = !state.appliances.tvPower;
+          state.appliances.tvInput = state.appliances.tvPower ? 'HDMI 1' : 'Off';
+        } else {
+          state.appliances.tvInput = state.appliances.tvInput === 'HDMI 1' ? 'HDMI 2' : 'HDMI 1';
+        }
+        logEvent(`[Human Override] TV state updated (${state.appliances.tvPower ? 'ON - ' + state.appliances.tvInput : 'OFF'}).`);
+      } else if (type === 'purifier') {
+        state.appliances.purifier = !state.appliances.purifier;
+        logEvent(`[Human Override] Air purifier toggled ${state.appliances.purifier ? 'ON' : 'OFF'}.`);
+      } else if (type === 'blinds') {
+        state.appliances.blinds = val;
+        logEvent(`[Human Override] Blinds set to ${val}.`);
+      }
+
+      updateUI();
+    }
+
+    /* ----------------------------------------------------
+       SENSOR TELEMETRY INJECTION HANDLERS
+    ---------------------------------------------------- */
+    function toggleSensor(sensor) {
+      if (sensor === 'pir') state.sensors.pir = !state.sensors.pir;
+      if (sensor === 'door') state.sensors.door = !state.sensors.door;
+      if (sensor === 'bed') state.sensors.bed = !state.sensors.bed;
+      
+      logEvent(`[Telemetry Injected] Sensor ${sensor.toUpperCase()} toggled to ${state.sensors[sensor]}.`);
+      runSensorFusion();
+    }
+
+    function updateSensorSlider(sensor, val) {
+      state.sensors[sensor] = parseFloat(val);
+      runSensorFusion();
+    }
+
+    function setSensorValues(newVals) {
+      Object.assign(state.sensors, newVals);
+      document.getElementById('input-sensor-lux').value = state.sensors.lux;
+      document.getElementById('input-sensor-temp').value = state.sensors.temp;
+      document.getElementById('input-sensor-sound').value = state.sensors.sound;
+      document.getElementById('input-sensor-humidity').value = state.sensors.humidity;
+      document.getElementById('input-sensor-co2').value = state.sensors.co2;
+      document.getElementById('input-sensor-pm25').value = state.sensors.pm25;
+      runSensorFusion();
+    }
+
+    function applyPresetMode(modeName) {
+      applyMode(modeName, false);
+    }
+
+    /* ----------------------------------------------------
+       LIVE DEMO STEP CONTROLLER
+    ---------------------------------------------------- */
+    function renderDemoStep() {
+      const cur = DEMO_STEPS[state.demoStep];
+      document.getElementById('demo-step-num').textContent = `Step ${state.demoStep + 1}/6`;
+      document.getElementById('demo-step-desc').innerHTML = `<strong class="text-cyan-300 font-semibold">${cur.title}:</strong> ${cur.desc}`;
+      cur.action();
+    }
+
+    function nextDemoStep() {
+      state.demoStep = (state.demoStep + 1) % DEMO_STEPS.length;
+      renderDemoStep();
+    }
+
+    function prevDemoStep() {
+      state.demoStep = (state.demoStep - 1 + DEMO_STEPS.length) % DEMO_STEPS.length;
+      renderDemoStep();
+    }
+
+    function toggleDemoAutoplay() {
+      state.demoAutoPlaying = !state.demoAutoPlaying;
+      const btnIcon = document.getElementById('play-pause-icon');
+      const btnText = document.getElementById('play-pause-text');
+
+      if (state.demoAutoPlaying) {
+        btnIcon.textContent = "⏸";
+        btnText.textContent = "Pause Demo";
+        state.demoTimer = setInterval(() => {
+          nextDemoStep();
+        }, 7000); // Progresses every 7 seconds
+      } else {
+        btnIcon.textContent = "▶";
+        btnText.textContent = "Play Demo";
+        clearInterval(state.demoTimer);
+      }
+    }
+
+    function resetSimulation() {
+      if (state.demoTimer) clearInterval(state.demoTimer);
+      state.demoAutoPlaying = false;
+      document.getElementById('play-pause-icon').textContent = "▶";
+      document.getElementById('play-pause-text').textContent = "Play Demo";
+      state.demoStep = 0;
+      setSensorValues({
+        pir: true, door: false, bed: false, lux: 120,
+        temp: 27.5, humidity: 55, sound: 42, co2: 580, pm25: 18
+      });
+      applyMode('Enter', false);
+      clearEventLogs();
+      logEvent("[System Reset] Returned to initial prototype baseline.");
+    }
+
+    /* ----------------------------------------------------
+       EVENT LOGGING UTILITY
+    ---------------------------------------------------- */
+    function logEvent(msg) {
+      const container = document.getElementById('event-log-container');
+      const time = new Date().toTimeString().split(' ')[0];
+      const div = document.createElement('div');
+      div.className = msg.includes('Automated') ? 'text-cyan-400' :
+                      msg.includes('Learned') ? 'text-amber-300' :
+                      msg.includes('Override') ? 'text-yellow-300' : 'text-slate-300';
+      div.textContent = `[${time}] ${msg}`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearEventLogs() {
+      document.getElementById('event-log-container').innerHTML = '';
+    }
+
+    /* ----------------------------------------------------
+       UI REFRESH & VISUAL ROOM ACTUATION SYNCHRONIZER
+    ---------------------------------------------------- */
+    function updateUI(breakdownHtml) {
+      const s = state.sensors;
+      const a = state.appliances;
+      const modeDef = MODE_DEFINITIONS[state.activeMode] || {};
+
+      // 1. Update Header
+      document.getElementById('header-mode-badge').textContent = state.activeMode;
+      document.getElementById('header-confidence').textContent = `${state.confidence}%`;
+
+      // 2. Update Mode Pills
+      document.querySelectorAll('.mode-pill').forEach(btn => {
+        btn.classList.remove('bg-cyan-600', 'text-slate-950', 'font-bold', 'border-cyan-400');
+        btn.classList.add('bg-slate-800', 'text-slate-300');
+      });
+      const activePill = document.getElementById(`pill-${state.activeMode.replace(/\s+/g, '')}`);
+      if (activePill) {
+        activePill.classList.remove('bg-slate-800', 'text-slate-300');
+        activePill.classList.add('bg-cyan-600', 'text-slate-950', 'font-bold', 'border-cyan-400');
+      }
+
+      // 3. Update Virtual Room Visual Scene
+      // Ambient Lighting
+      const lightOverlay = document.getElementById('ambient-light-overlay');
+      const lightPercent = a.lightIntensity;
+      if (lightPercent === 0) {
+        lightOverlay.style.background = 'radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.95) 0%, rgba(2, 6, 23, 1) 100%)';
+        document.getElementById('vis-ceiling-light').style.opacity = '0.2';
+        document.getElementById('vis-ceiling-light').style.boxShadow = 'none';
+      } else {
+        const alpha = (lightPercent / 100) * 0.55;
+        const color = a.lightColor === 'warm' ? `rgba(254, 215, 170, ${alpha})` :
+                      a.lightColor === 'dim-amber' ? `rgba(245, 158, 11, ${alpha * 0.7})` :
+                      `rgba(254, 240, 138, ${alpha})`;
+        lightOverlay.style.background = `radial-gradient(circle at 50% 30%, ${color} 0%, transparent 80%)`;
+        document.getElementById('vis-ceiling-light').style.opacity = '1';
+        document.getElementById('vis-ceiling-light').style.boxShadow = `0 0 35px ${color}`;
+      }
+      document.getElementById('vis-light-percent').textContent = `${lightPercent}%`;
+
+      // Ceiling Fan Rotation
+      const fanEl = document.getElementById('vis-fan-blades');
+      fanEl.className = 'w-10 h-10 relative transition-all ' + 
+        (a.fanSpeed === 'High' ? 'fan-spin-fast' : a.fanSpeed === 'Low' ? 'fan-spin-slow' : a.fanSpeed === 'Medium' ? 'fan-spin-med' : '');
+      document.getElementById('vis-fan-speed-label').textContent = a.fanSpeed;
+
+      // AC Unit Visuals
+      document.getElementById('vis-ac-temp').textContent = `${a.acTemp}°C`;
+      document.getElementById('vis-ac-power-badge').textContent = a.acPower ? 'ON' : 'OFF';
+      document.getElementById('vis-ac-airflow').style.display = a.acPower && a.fanSpeed !== 'Off' ? 'flex' : 'none';
+
+      // TV Display Visuals
+      const tvScreen = document.getElementById('vis-tv-screen');
+      const tvIcon = document.getElementById('vis-tv-content-icon');
+      const tvText = document.getElementById('vis-tv-content-text');
+      if (a.tvPower) {
+        tvScreen.className = "w-full h-full bg-cyan-950/70 border border-cyan-500/40 rounded flex flex-col items-center justify-center";
+        tvIcon.textContent = "🎬";
+        tvText.textContent = a.tvInput;
+      } else {
+        tvScreen.className = "w-full h-full bg-slate-950 rounded flex flex-col items-center justify-center opacity-30";
+        tvIcon.textContent = "⏻";
+        tvText.textContent = "STANDBY";
+      }
+
+      // Blinds Visuals
+      document.getElementById('vis-blinds-status').textContent = a.blinds.toUpperCase();
+      const slatRotation = a.blinds === 'Open' ? 'rotate-[-40deg]' : 'rotate-0';
+      ['1','2','3','4'].forEach(id => {
+        const el = document.getElementById(`vis-blind-slat-${id}`);
+        el.className = `h-1 bg-slate-400 rounded transition-all duration-500 transform ${slatRotation}`;
+      });
+
+      // Human Presence Visuals
+      const avatar = document.getElementById('vis-human-avatar');
+      const humanLabel = document.getElementById('vis-human-label');
+      if (s.bed) {
+        avatar.style.opacity = '0.2';
+        humanLabel.textContent = "In Bed";
+        document.getElementById('vis-bed-status').textContent = "Occupied (Asleep)";
+        document.getElementById('vis-bed-status').className = "text-[9px] font-mono text-emerald-400 font-bold";
+      } else if (s.pir) {
+        avatar.style.opacity = '1';
+        humanLabel.textContent = "Active";
+        document.getElementById('vis-bed-status').textContent = "Vacant";
+        document.getElementById('vis-bed-status').className = "text-[9px] font-mono text-slate-400 font-semibold";
+      } else {
+        avatar.style.opacity = '0.05';
+        humanLabel.textContent = "Absent";
+        document.getElementById('vis-bed-status').textContent = "Vacant";
+        document.getElementById('vis-bed-status').className = "text-[9px] font-mono text-slate-400 font-semibold";
+      }
+
+      // Door Visuals
+      const doorGraphic = document.getElementById('vis-door-graphic');
+      const doorStateText = document.getElementById('vis-door-state');
+      if (s.door) {
+        doorGraphic.style.transform = 'perspective(300px) rotateY(-65deg)';
+        doorStateText.textContent = 'OPEN';
+        doorStateText.className = 'text-[9px] font-mono px-1.5 rounded bg-amber-950 text-amber-400 border border-amber-800';
+        document.getElementById('vis-door-sensor-val').textContent = 'Open (0)';
+      } else {
+        doorGraphic.style.transform = 'perspective(300px) rotateY(0deg)';
+        doorStateText.textContent = 'CLOSED';
+        doorStateText.className = 'text-[9px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
+        document.getElementById('vis-door-sensor-val').textContent = 'Secure (1)';
+      }
+
+      // Nightlight
+      const nightLight = document.getElementById('vis-night-light');
+      if (a.nightLight) {
+        nightLight.className = "w-8 h-8 rounded-full bg-amber-400/90 border border-amber-300 shadow-[0_0_20px_#f59e0b] flex items-center justify-center transition-all";
+      } else {
+        nightLight.className = "w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center transition-all opacity-30";
+      }
+
+      // Air Purifier
+      document.getElementById('vis-purifier-badge').textContent = a.purifier ? 'ON' : 'STANDBY';
+      document.getElementById('vis-purifier-led').className = a.purifier ? 
+        'w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#10b981]' : 
+        'w-3.5 h-3.5 rounded-full bg-slate-600';
+
+      // 4. Update Touchscreen Wall Panel
+      document.getElementById('touch-active-mode').textContent = state.activeMode.toUpperCase();
+      document.getElementById('touch-mode-desc').textContent = modeDef.desc || '';
+      document.getElementById('touch-room-temp').textContent = `${a.acTemp}°C`;
+      document.getElementById('touch-light-val').textContent = `${a.lightIntensity}%`;
+      document.getElementById('touch-light-bar').style.width = `${a.lightIntensity}%`;
+      document.getElementById('touch-ac-val').textContent = `${a.acTemp}°C`;
+      document.getElementById('touch-ac-target').textContent = `${a.acTemp}°C Target`;
+      document.getElementById('touch-fan-val').textContent = a.fanSpeed;
+      document.getElementById('touch-tv-val').textContent = a.tvPower ? a.tvInput : 'Off';
+      document.getElementById('touch-tv-btn').textContent = a.tvPower ? 'Power Off' : 'Power On';
+      document.getElementById('touch-purifier-val').textContent = a.purifier ? 'Running' : 'Standby';
+      document.getElementById('touch-blinds-val').textContent = a.blinds;
+
+      // 5. Update Sensor Injection Rack Display Values
+      document.getElementById('label-sensor-pir').textContent = s.pir ? 'Motion Active' : 'No Motion';
+      document.getElementById('label-sensor-pir').className = s.pir ? 'text-[10px] font-mono font-bold text-emerald-400' : 'text-[10px] font-mono font-bold text-slate-400';
+      document.getElementById('label-sensor-door').textContent = s.door ? 'Open' : 'Closed';
+      document.getElementById('label-sensor-bed').textContent = s.bed ? 'Occupied' : 'Vacant';
+      document.getElementById('label-sensor-bed').className = s.bed ? 'text-[10px] font-mono font-bold text-emerald-400' : 'text-[10px] font-mono font-bold text-slate-400';
+      document.getElementById('val-sensor-lux').textContent = `${s.lux} lx`;
+      document.getElementById('val-sensor-temp').textContent = `${s.temp}°C`;
+      document.getElementById('val-sensor-sound').textContent = `${s.sound} dB`;
+      document.getElementById('val-sensor-humidity').textContent = `${s.humidity}%`;
+      document.getElementById('val-sensor-co2').textContent = `${s.co2} ppm`;
+      document.getElementById('val-sensor-pm25').textContent = `${s.pm25} µg/m³`;
+
+      // 6. Update Fusion Confidence & Breakdown
+      document.getElementById('fusion-confidence-val').textContent = `${state.confidence}% (${state.confidence >= 75 ? 'High Confidence' : 'Ambiguous / Gate Triggered'})`;
+      document.getElementById('fusion-confidence-bar').style.width = `${state.confidence}%`;
+      if (breakdownHtml) {
+        document.getElementById('fusion-breakdown').innerHTML = breakdownHtml;
+      }
+    }
+
+    // Initialize simulation on load
+    window.addEventListener('DOMContentLoaded', () => {
+      runSensorFusion();
+      renderDemoStep();
+    });
+  </script>
+</body>
+</html>
